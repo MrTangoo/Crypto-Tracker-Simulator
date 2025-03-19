@@ -120,7 +120,7 @@ export default function Home() {
   return (
     <div className="bg-gray-100 min-h-screen">
       <Navbar />
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-6xl mx-auto">
         <div className='flex justify-center text-3xl md:text-4xl font-bold text-center mb-8'>
           <h2 className='pr-2'>Portefeuille: </h2>
           <h2 className={`${getPortfolioClass()}`}>

@@ -5,7 +5,7 @@ const TransactionHistory = ({ transactions }) => {
     return (
         <div className="bg-white shadow-lg rounded-lg p-6 mt-8">
             <h2 className="text-2xl font-semibold mb-4 text-center">Historique des transactions</h2>
-            <div className="max-h-96 overflow-y-auto"> {/* Limite la hauteur et ajoute la scrollbar si nécessaire */}
+            <div className="max-h-28 overflow-y-auto"> {/* Limite la hauteur et ajoute la scrollbar si nécessaire */}
                 <table className="min-w-full table-auto">
                     <thead>
                         <tr>
