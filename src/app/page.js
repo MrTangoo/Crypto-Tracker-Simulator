@@ -3,16 +3,18 @@ import { useEffect, useState } from 'react';
 import { getCryptos } from './api/cryptos';
 import CryptoList from './components/CryptoList';
 import TransactionHistory from './components/TransactionHistory';
+import Navbar from './components/Navbar';
 
 export default function Home() {
   const [cryptos, setCryptos] = useState([]);
-  const [portfolio, setPortfolio] = useState({ cryptos: {}, balance: 1000 });  // solde initial de 1000 $
+  const [portfolio, setPortfolio] = useState({ cryptos: {}, balance: 1000, purchases: {} });  // solde initial de 1000 $ + un objet 'purchases' pour stocker les prix d'achat
   const [transactions, setTransactions] = useState([]);
   const [portfolioHistory, setPortfolioHistory] = useState([]);  // Historique des valeurs du portefeuille
   const [initialPortfolioValue, setInitialPortfolioValue] = useState(null);  // Valeur initiale du portefeuille
   const [loading, setLoading] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false); // Pour afficher/fermer le modal
+  const [modalMessage, setModalMessage] = useState(''); // Message à afficher dans le modal
 
-  // Fonction pour récupérer les cryptos depuis l'API
   const fetchCryptos = async () => {
     setLoading(true);
     const data = await getCryptos();
@@ -20,13 +22,10 @@ export default function Home() {
     setLoading(false);
   };
 
-  // Récupère les données de cryptos au démarrage
   useEffect(() => {
     fetchCryptos();
-    // Rafraîchit les prix toutes les 30 secondes
-    const intervalId = setInterval(fetchCryptos, 50000);
+    const intervalId = setInterval(fetchCryptos, 30000);
 
-    // Nettoyage des intervalles lors de la destruction du composant
     return () => {
       clearInterval(intervalId);
     };
@@ -44,11 +43,11 @@ export default function Home() {
           ...portfolio,
           balance: portfolio.balance - totalCost,  // réduire le solde en dollars
           cryptos: { ...portfolio.cryptos, [crypto.id]: newBalance }, // Mise à jour des cryptos dans le portefeuille
+          purchases: { ...portfolio.purchases, [crypto.id]: crypto.current_price }, // Enregistrer le prix d'achat
         };
-        setPortfolio(newPortfolio);  // Met à jour le portefeuille avec le nouveau solde et la nouvelle quantité de crypto
+        setPortfolio(newPortfolio);
         setTransactions([...transactions, { type: 'Achat', crypto: crypto.name, quantity, price: crypto.current_price }]);
 
-        // Enregistrer la valeur initiale du portefeuille lors du premier achat
         if (initialPortfolioValue === null) {
           setInitialPortfolioValue(calculatePortfolioValue());
         }
@@ -63,48 +62,89 @@ export default function Home() {
     if (quantity && !isNaN(quantity) && quantity > 0 && portfolio.cryptos[crypto.id] >= quantity) {
       const currentBalance = portfolio.cryptos[crypto.id];
       const totalRevenue = crypto.current_price * parseFloat(quantity);
+
+      const purchasePrice = portfolio.purchases[crypto.id];
+      const totalCost = purchasePrice * parseFloat(quantity); // Coût total de la crypto achetée
+      const profitOrLoss = totalRevenue - totalCost; // Calcul du gain ou de la perte
+
       const newBalance = currentBalance - parseFloat(quantity);
       const newPortfolio = {
         ...portfolio,
         balance: portfolio.balance + totalRevenue,  // ajouter le revenu de la vente
         cryptos: { ...portfolio.cryptos, [crypto.id]: newBalance },
       };
-      setPortfolio(newPortfolio);  // Met à jour le portefeuille
-      setTransactions([...transactions, { type: 'Vente', crypto: crypto.name, quantity, price: crypto.current_price }]);
+
+      // Mettre à jour le portefeuille
+      setPortfolio(newPortfolio);
+      setTransactions([...transactions, {
+        type: 'Vente',
+        crypto: crypto.name,
+        quantity,
+        price: crypto.current_price,
+        profitOrLoss
+      }]);
+
+      setModalMessage(profitOrLoss > 0
+        ? `Vous avez gagné ${profitOrLoss.toFixed(2)}$ sur cette vente.`
+        : `Vous avez perdu ${Math.abs(profitOrLoss).toFixed(2)}$ sur cette vente.`);
+
+      setIsModalOpen(true);
+
+      setTimeout(() => {
+        setIsModalOpen(false);
+      }, 5000);
     } else {
       alert("Vous n'avez pas assez de cette crypto dans votre portefeuille.");
     }
   };
 
-  // Fonction pour calculer la valeur du portefeuille
   const calculatePortfolioValue = () => {
-    let totalValue = portfolio.balance;  // Commence par le solde en dollars
+    let totalValue = portfolio.balance;
     cryptos.forEach((crypto) => {
       const quantity = portfolio.cryptos[crypto.id] || 0;
-      totalValue += quantity * crypto.current_price;  // Ajouter la valeur des cryptos dans le portefeuille
+      totalValue += quantity * crypto.current_price;
     });
     return totalValue;
   };
 
-  // Fonction pour déterminer si on est en gain ou en perte
   const getPortfolioClass = () => {
     if (initialPortfolioValue === null) return '';  // Si la valeur initiale n'est pas encore définie, on n'affiche pas de classe
 
     const currentPortfolioValue = calculatePortfolioValue();
-    return currentPortfolioValue >= initialPortfolioValue ? 'text-green-500' : 'text-red-500';
+    if (currentPortfolioValue === initialPortfolioValue) return '';
+    return currentPortfolioValue >= initialPortfolioValue ? 'text-green-600' : 'text-red-500';
   };
 
   return (
-    <div className="bg-gray-100 min-h-screen p-8">
+    <div className="bg-gray-100 min-h-screen">
+      <Navbar />
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-4xl font-semibold text-center text-blue-600 mb-8">Simulateur d'Investissement en Cryptomonnaies</h1>
-
-        <h2 className={`text-2xl font-medium text-center mb-8 ${getPortfolioClass()}`}>
-          Portefeuille actuel : ${calculatePortfolioValue().toFixed(2)}
-        </h2>
-
+        <div className='flex justify-center text-4xl font-bold text-center mb-8'>
+          <h2 className='pr-2'>Portefeuille actuel: </h2>
+          <h2 className={`${getPortfolioClass()}`}>
+            ${calculatePortfolioValue().toFixed(2)}
+          </h2>
+        </div>
         <CryptoList cryptos={cryptos} portfolio={portfolio} handleBuy={handleBuy} handleSell={handleSell} />
         <TransactionHistory transactions={transactions} />
+
+        {/* Modal */}
+        {isModalOpen && (
+          <div className="fixed bottom-10 right-10 flex items-center justify-center bg-transparent bg-opacity-50 z-50">
+            <div className="bg-white rounded-lg p-6 max-w-sm w-full shadow-lg">
+              <h3 className="text-xl font-semibold mb-4">Détails de la transaction</h3>
+              <p className="text-lg">{modalMessage}</p>
+              <div className="mt-4 flex justify-end">
+                <button
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  onClick={() => setIsModalOpen(false)}
+                >
+                  Fermer
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

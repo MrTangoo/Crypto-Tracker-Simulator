@@ -7,12 +7,12 @@ const CryptoCard = ({ crypto, portfolio, handleBuy, handleSell }) => {
             <p className="text-md text-gray-500 mb-4">Votre solde : {portfolio.cryptos[crypto.id] || 0} {crypto.symbol.toUpperCase()}</p>
             <div className="flex justify-between gap-4">
                 <button
-                    className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition"
+                    className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition"
                     onClick={() => handleBuy(crypto)}>
                     Acheter
                 </button>
                 <button
-                    className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition"
+                    className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition"
                     onClick={() => handleSell(crypto)}>
                     Vendre
                 </button>
