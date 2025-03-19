@@ -1,103 +1,111 @@
-import Image from "next/image";
+"use client";
+import { useEffect, useState } from 'react';
+import { getCryptos } from './api/cryptos';
+import CryptoList from './components/CryptoList';
+import TransactionHistory from './components/TransactionHistory';
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.js
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [cryptos, setCryptos] = useState([]);
+  const [portfolio, setPortfolio] = useState({ cryptos: {}, balance: 1000 });  // solde initial de 1000 $
+  const [transactions, setTransactions] = useState([]);
+  const [portfolioHistory, setPortfolioHistory] = useState([]);  // Historique des valeurs du portefeuille
+  const [initialPortfolioValue, setInitialPortfolioValue] = useState(null);  // Valeur initiale du portefeuille
+  const [loading, setLoading] = useState(false);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+  // Fonction pour récupérer les cryptos depuis l'API
+  const fetchCryptos = async () => {
+    setLoading(true);
+    const data = await getCryptos();
+    setCryptos(data);
+    setLoading(false);
+  };
+
+  // Récupère les données de cryptos au démarrage
+  useEffect(() => {
+    fetchCryptos();
+    // Rafraîchit les prix toutes les 30 secondes
+    const intervalId = setInterval(fetchCryptos, 50000);
+
+    // Nettoyage des intervalles lors de la destruction du composant
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, []);
+
+  // Fonction pour gérer les achats
+  const handleBuy = (crypto) => {
+    const quantity = prompt(`Combien de ${crypto.name} souhaitez-vous acheter ?`);
+    if (quantity && !isNaN(quantity) && quantity > 0) {
+      const totalCost = crypto.current_price * parseFloat(quantity);
+      if (portfolio.balance >= totalCost) {
+        const currentBalance = portfolio.cryptos[crypto.id] || 0;
+        const newBalance = currentBalance + parseFloat(quantity);
+        const newPortfolio = {
+          ...portfolio,
+          balance: portfolio.balance - totalCost,  // réduire le solde en dollars
+          cryptos: { ...portfolio.cryptos, [crypto.id]: newBalance }, // Mise à jour des cryptos dans le portefeuille
+        };
+        setPortfolio(newPortfolio);  // Met à jour le portefeuille avec le nouveau solde et la nouvelle quantité de crypto
+        setTransactions([...transactions, { type: 'Achat', crypto: crypto.name, quantity, price: crypto.current_price }]);
+
+        // Enregistrer la valeur initiale du portefeuille lors du premier achat
+        if (initialPortfolioValue === null) {
+          setInitialPortfolioValue(calculatePortfolioValue());
+        }
+      } else {
+        alert("Solde insuffisant pour acheter cette crypto.");
+      }
+    }
+  };
+
+  const handleSell = (crypto) => {
+    const quantity = prompt(`Combien de ${crypto.name} souhaitez-vous vendre ?`);
+    if (quantity && !isNaN(quantity) && quantity > 0 && portfolio.cryptos[crypto.id] >= quantity) {
+      const currentBalance = portfolio.cryptos[crypto.id];
+      const totalRevenue = crypto.current_price * parseFloat(quantity);
+      const newBalance = currentBalance - parseFloat(quantity);
+      const newPortfolio = {
+        ...portfolio,
+        balance: portfolio.balance + totalRevenue,  // ajouter le revenu de la vente
+        cryptos: { ...portfolio.cryptos, [crypto.id]: newBalance },
+      };
+      setPortfolio(newPortfolio);  // Met à jour le portefeuille
+      setTransactions([...transactions, { type: 'Vente', crypto: crypto.name, quantity, price: crypto.current_price }]);
+    } else {
+      alert("Vous n'avez pas assez de cette crypto dans votre portefeuille.");
+    }
+  };
+
+  // Fonction pour calculer la valeur du portefeuille
+  const calculatePortfolioValue = () => {
+    let totalValue = portfolio.balance;  // Commence par le solde en dollars
+    cryptos.forEach((crypto) => {
+      const quantity = portfolio.cryptos[crypto.id] || 0;
+      totalValue += quantity * crypto.current_price;  // Ajouter la valeur des cryptos dans le portefeuille
+    });
+    return totalValue;
+  };
+
+  // Fonction pour déterminer si on est en gain ou en perte
+  const getPortfolioClass = () => {
+    if (initialPortfolioValue === null) return '';  // Si la valeur initiale n'est pas encore définie, on n'affiche pas de classe
+
+    const currentPortfolioValue = calculatePortfolioValue();
+    return currentPortfolioValue >= initialPortfolioValue ? 'text-green-500' : 'text-red-500';
+  };
+
+  return (
+    <div className="bg-gray-100 min-h-screen p-8">
+      <div className="max-w-7xl mx-auto">
+        <h1 className="text-4xl font-semibold text-center text-blue-600 mb-8">Simulateur d'Investissement en Cryptomonnaies</h1>
+
+        <h2 className={`text-2xl font-medium text-center mb-8 ${getPortfolioClass()}`}>
+          Portefeuille actuel : ${calculatePortfolioValue().toFixed(2)}
+        </h2>
+
+        <CryptoList cryptos={cryptos} portfolio={portfolio} handleBuy={handleBuy} handleSell={handleSell} />
+        <TransactionHistory transactions={transactions} />
+      </div>
     </div>
   );
 }
