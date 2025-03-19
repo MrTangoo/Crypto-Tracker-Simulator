@@ -121,7 +121,7 @@ export default function Home() {
     <div className="bg-gray-100 min-h-screen">
       <Navbar />
       <div className="max-w-7xl mx-auto">
-        <div className='flex justify-center text-xl md:text-4xl font-bold text-center mb-8'>
+        <div className='flex justify-center text-3xl md:text-4xl font-bold text-center mb-8'>
           <h2 className='pr-2'>Portefeuille: </h2>
           <h2 className={`${getPortfolioClass()}`}>
             ${calculatePortfolioValue().toFixed(2)}
