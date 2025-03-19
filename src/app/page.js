@@ -24,7 +24,7 @@ export default function Home() {
 
   useEffect(() => {
     fetchCryptos();
-    const intervalId = setInterval(fetchCryptos, 30000);
+    const intervalId = setInterval(fetchCryptos, 45000);
 
     return () => {
       clearInterval(intervalId);
@@ -83,6 +83,8 @@ export default function Home() {
         price: crypto.current_price,
         profitOrLoss
       }]);
+      setInitialPortfolioValue(calculatePortfolioValue());
+
 
       setModalMessage(profitOrLoss > 0
         ? `Vous avez gagné ${profitOrLoss.toFixed(2)}$ sur cette vente.`
@@ -112,15 +114,15 @@ export default function Home() {
 
     const currentPortfolioValue = calculatePortfolioValue();
     if (currentPortfolioValue === initialPortfolioValue) return '';
-    return currentPortfolioValue >= initialPortfolioValue ? 'text-green-600' : 'text-red-500';
+    return currentPortfolioValue >= initialPortfolioValue ? 'text-green-600' : 'text-red-600';
   };
 
   return (
     <div className="bg-gray-100 min-h-screen">
       <Navbar />
       <div className="max-w-7xl mx-auto">
-        <div className='flex justify-center text-4xl font-bold text-center mb-8'>
-          <h2 className='pr-2'>Portefeuille actuel: </h2>
+        <div className='flex justify-center text-xl md:text-4xl font-bold text-center mb-8'>
+          <h2 className='pr-2'>Portefeuille: </h2>
           <h2 className={`${getPortfolioClass()}`}>
             ${calculatePortfolioValue().toFixed(2)}
           </h2>
